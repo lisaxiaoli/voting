@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     DIDManager: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
       abi: [
         {
           anonymous: false,
@@ -119,7 +119,39 @@ const deployedContracts = {
         },
         {
           inputs: [],
+          name: "getCurrentSender",
+          outputs: [
+            {
+              internalType: "address",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "getDidList",
+          outputs: [
+            {
+              internalType: "string[]",
+              name: "",
+              type: "string[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+          ],
+          name: "getDidListByAddress",
           outputs: [
             {
               internalType: "string[]",
@@ -269,7 +301,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 11,
     },
   },
 } as const;

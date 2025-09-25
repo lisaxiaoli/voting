@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { KeyIcon, ShieldCheckIcon, WalletIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
@@ -26,6 +26,8 @@ const CreateDIDPage = () => {
     const [showDIDInfo, setShowDIDInfo] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [copySuccess, setCopySuccess] = useState<string | null>(null);
+    const [localStorageAvailable, setLocalStorageAvailable] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     // 获取钱包连接状态
     const { address: connectedAddress, isConnected } = useAccount();
@@ -35,8 +37,11 @@ const CreateDIDPage = () => {
         contractName: "DIDManager"
     });
 
-    // 检查localStorage可用性
-    const localStorageAvailable = isLocalStorageAvailable();
+    // 检查localStorage可用性（客户端渲染后）
+    useEffect(() => {
+        setIsMounted(true);
+        setLocalStorageAvailable(isLocalStorageAvailable());
+    }, []);
 
     // 复制到剪贴板功能
     const copyToClipboard = async (text: string, label: string) => {
@@ -82,17 +87,43 @@ const CreateDIDPage = () => {
             if (writeDIDManagerAsync) {
                 const contractParams = convertToContractParams(didInfo);
 
-                await writeDIDManagerAsync({
-                    functionName: "createDid",
-                    args: [
-                        contractParams.did,
-                        BigInt(contractParams.version),
-                        contractParams.mainPublicKey,
-                        contractParams.recoPublicKey,
-                        contractParams.serviceEndpoint,
-                        contractParams.didProof
-                    ]
+                console.log('🚀 开始调用合约创建DID:', {
+                    did: contractParams.did,
+                    version: contractParams.version,
+                    mainPublicKey: contractParams.mainPublicKey,
+                    recoPublicKey: contractParams.recoPublicKey,
+                    serviceEndpoint: contractParams.serviceEndpoint,
+                    didProof: contractParams.didProof
                 });
+
+                try {
+                    const txResult = await writeDIDManagerAsync({
+                        functionName: "createDid",
+                        args: [
+                            contractParams.did,
+                            BigInt(contractParams.version),
+                            contractParams.mainPublicKey,
+                            contractParams.recoPublicKey,
+                            contractParams.serviceEndpoint,
+                            contractParams.didProof
+                        ]
+                    });
+
+                    console.log('✅ 合约调用成功，交易哈希:', txResult);
+                    console.log('🔍 请等待交易确认后，在调试页面验证DID是否已写入区块链');
+                    console.log('🔍 调试页面: http://localhost:3000/debug');
+                    console.log('🔍 交易详情: http://localhost:3000/blockexplorer');
+
+                    // 等待几秒钟让交易确认
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    console.log('⏰ 等待3秒后，建议刷新DID文档页面查看结果');
+                } catch (contractError) {
+                    console.error('❌ 合约调用失败:', contractError);
+                    throw new Error(`合约调用失败: ${contractError instanceof Error ? contractError.message : String(contractError)}`);
+                }
+            } else {
+                console.warn('⚠️ writeDIDManagerAsync 不可用，跳过合约调用');
+                throw new Error('合约写入功能不可用，请检查钱包连接');
             }
 
             // 保存到localStorage
@@ -276,7 +307,8 @@ const CreateDIDPage = () => {
                                         <div className="text-center">
                                             <ConnectButton.Custom>
                                                 {({ openConnectModal, mounted }) => {
-                                                    const connected = mounted && isConnected;
+                                                    // 确保在客户端渲染后才检查连接状态
+                                                    const connected = isMounted && mounted && isConnected;
 
                                                     if (!connected) {
                                                         return (
@@ -373,7 +405,7 @@ const CreateDIDPage = () => {
                         )}
 
                         {/* localStorage状态提示 */}
-                        {!localStorageAvailable && (
+                        {isMounted && !localStorageAvailable && (
                             <div className="alert alert-warning mb-6 max-w-md mx-auto">
                                 <ShieldCheckIcon className="h-4 w-4" />
                                 <span className="text-sm">localStorage不可用，DID信息将无法保存到本地</span>

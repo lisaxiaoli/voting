@@ -153,6 +153,23 @@ contract DIDManager {
         return ownerDIDs[msg.sender];
     }
 
+    /**
+     * @dev 调试方法：获取指定地址的DID列表
+     * @param owner 要查询的地址
+     * @return DID标识符数组
+     */
+    function getDidListByAddress(address owner) public view returns (string[] memory) {
+        return ownerDIDs[owner];
+    }
+
+    /**
+     * @dev 调试方法：获取当前调用者地址
+     * @return 当前调用者地址
+     */
+    function getCurrentSender() public view returns (address) {
+        return msg.sender;
+    }
+
     // 辅助函数：从所有者映射中移除DID
     function removeFromOwnerDIDs(address owner, string memory did) private {
         string[] storage dids = ownerDIDs[owner];

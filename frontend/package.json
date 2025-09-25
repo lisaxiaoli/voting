@@ -14,7 +14,7 @@
     "account:reveal-pk": "yarn workspace @se-2/hardhat account:reveal-pk",
     "chain": "yarn hardhat:chain",
     "compile": "yarn hardhat:compile",
-    "deploy": "yarn hardhat:deploy",
+    "deploy": "yarn hardhat:deploy && yarn update-config",
     "fork": "yarn hardhat:fork",
     "format": "yarn next:format && yarn hardhat:format",
     "generate": "yarn account:generate",
@@ -49,10 +49,11 @@
     "vercel:yolo": "yarn workspace @se-2/nextjs vercel:yolo",
     "verify": "yarn hardhat:verify",
     "setup": "node scripts/deploy-and-configure.js",
+    "deploy:restart": "node scripts/deploy-with-restart.js",
     "update-config": "node scripts/update-contract-address.js",
-    "deploy:sepolia": "yarn setup sepolia",
-    "deploy:arbitrum": "yarn setup arbitrumSepolia",
-    "deploy:polygon": "yarn setup polygonAmoy"
+    "deploy:sepolia": "yarn hardhat:deploy --network sepolia && yarn update-config",
+    "deploy:arbitrum": "yarn hardhat:deploy --network arbitrumSepolia && yarn update-config",
+    "deploy:polygon": "yarn hardhat:deploy --network polygonAmoy && yarn update-config"
   },
   "devDependencies": {
     "husky": "~9.1.6",

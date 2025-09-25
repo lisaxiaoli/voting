@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BugAntIcon, KeyIcon, UserCircleIcon } from "@heroicons/react/24/outline";
-import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { Bars3Icon, BugAntIcon, KeyIcon, UserCircleIcon, DocumentTextIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
+import { FaucetButton, RainbowKitCustomConnectButton, DIDInfoDisplay } from "~~/components/scaffold-eth";
+import { useOutsideClick, useTargetNetwork, useAuth } from "~~/hooks/scaffold-eth";
+import { useAccount } from "wagmi";
 
 type HeaderMenuLink = {
   label: string;
@@ -15,30 +16,59 @@ type HeaderMenuLink = {
   icon?: React.ReactNode;
 };
 
-export const menuLinks: HeaderMenuLink[] = [
+// 游客可见的顶部导航
+export const guestMenuLinks: HeaderMenuLink[] = [
   {
-    label: "Home",
+    label: "首页",
     href: "/",
   },
   {
-    label: "Debug Contracts",
-    href: "/debug",
-    icon: <BugAntIcon className="h-4 w-4" />,
-  },
-  {
-    label: "Create DID",
+    label: "创建DID",
     href: "/create-did",
     icon: <KeyIcon className="h-4 w-4" />,
   },
   {
-    label: "Login",
+    label: "调试",
+    href: "/debug",
+    icon: <WrenchScrewdriverIcon className="h-4 w-4" />,
+  },
+  {
+    label: "登录",
     href: "/login",
     icon: <UserCircleIcon className="h-4 w-4" />,
   },
 ];
 
-export const HeaderMenuLinks = () => {
+// 登录用户可见的顶部导航
+export const loggedInMenuLinks: HeaderMenuLink[] = [
+  {
+    label: "首页",
+    href: "/",
+  },
+  {
+    label: "创建DID",
+    href: "/create-did",
+    icon: <KeyIcon className="h-4 w-4" />,
+  },
+  {
+    label: "获取DID文档",
+    href: "/get-did-document",
+    icon: <DocumentTextIcon className="h-4 w-4" />,
+  },
+  {
+    label: "调试",
+    href: "/debug",
+    icon: <WrenchScrewdriverIcon className="h-4 w-4" />,
+  },
+];
+
+interface HeaderMenuLinksProps {
+  isLoggedIn: boolean;
+}
+
+export const HeaderMenuLinks: React.FC<HeaderMenuLinksProps> = ({ isLoggedIn }) => {
   const pathname = usePathname();
+  const menuLinks = isLoggedIn ? loggedInMenuLinks : guestMenuLinks;
 
   return (
     <>
@@ -66,8 +96,29 @@ export const HeaderMenuLinks = () => {
  * Site header
  */
 export const Header = () => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { targetNetwork } = useTargetNetwork();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
+  const { address: connectedAddress, isConnected } = useAccount();
+  const { isLoggedIn, currentDID, isLoading } = useAuth();
+
+  console.log('🔍 Header 组件状态:', {
+    connectedAddress,
+    isConnected,
+    isLoggedIn,
+    currentDID,
+    isLoading
+  });
+
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+    // 触发自定义事件通知MainLayout
+    window.dispatchEvent(new CustomEvent('toggleSidebar', {
+      detail: { isCollapsed: !isSidebarCollapsed }
+    }));
+  };
+
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
@@ -77,6 +128,7 @@ export const Header = () => {
   return (
     <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
       <div className="navbar-start w-auto lg:w-1/2">
+        {/* 移动端汉堡菜单 */}
         <details className="dropdown" ref={burgerMenuRef}>
           <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-transparent">
             <Bars3Icon className="h-1/2" />
@@ -87,24 +139,47 @@ export const Header = () => {
               burgerMenuRef?.current?.removeAttribute("open");
             }}
           >
-            <HeaderMenuLinks />
+            {/* 移动端DID信息 */}
+            <DIDInfoDisplay isMobile={true} />
+            <HeaderMenuLinks isLoggedIn={isLoggedIn} />
           </ul>
         </details>
+
+        {/* 侧边栏切换按钮 */}
+        <button
+          onClick={toggleSidebar}
+          className="btn btn-ghost btn-sm lg:hidden mr-2"
+          aria-label="切换侧边栏"
+        >
+          <Bars3Icon className="h-5 w-5" />
+        </button>
+
+        {/* Logo */}
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
             <Image alt="SE2 logo" className="cursor-pointer" fill src="/logo.svg" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Scaffold-ETH</span>
-            <span className="text-xs">Ethereum dev stack</span>
+            <span className="font-bold leading-tight">LC Voting</span>
+            <span className="text-xs">DID管理系统</span>
           </div>
         </Link>
+
+        {/* 桌面端导航菜单 */}
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
-          <HeaderMenuLinks />
+          <HeaderMenuLinks isLoggedIn={isLoggedIn} />
         </ul>
       </div>
-      <div className="navbar-end grow mr-4">
+
+      {/* 右侧区域 */}
+      <div className="navbar-end grow mr-4 flex items-center gap-2">
+        {/* 钱包连接按钮 */}
         <RainbowKitCustomConnectButton />
+
+        {/* 用户信息区域 - 显示在钱包连接按钮右侧 */}
+        <DIDInfoDisplay className="hidden lg:flex" />
+
+        {/* 水龙头按钮 */}
         {isLocalNetwork && <FaucetButton />}
       </div>
     </div>
